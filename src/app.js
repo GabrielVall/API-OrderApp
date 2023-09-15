@@ -9,13 +9,13 @@ app.use(express.json());
 // Ruta por defecto
 app.get('/', (req, res) => {
   res.send(`
-    <h1>API de Usuarios</h1>
+    <h1>API de users</h1>
     <p>Endpoints disponibles:</p>
     <ul>
-      <li>GET /usuarios</li>
-      <li>POST /usuarios</li>
-      <li>PUT /usuarios/:id</li>
-      <li>DELETE /usuarios/:id</li>
+      <li>GET /users</li>
+      <li>POST /users</li>
+      <li>PUT /users/:id</li>
+      <li>DELETE /users/:id</li>
     </ul>
   `);
 });
@@ -28,13 +28,13 @@ app.use('/categories', categoriesRoutes);
 const clientsRoutes = require('./routes/clientsRoutes');
 app.use('/clients', clientsRoutes);
 
-// Ruta para usuarios
+// Ruta para users
 const usersRoutes = require('./routes/usersRoutes');
 app.use('/users', usersRoutes);
 
-// Ruta para complementos
-const complementsRoutes = require('./routes/complementsRoutes');
-app.use('/complements', complementsRoutes);
+// Ruta para addons
+const addonsRoutes = require('./routes/addonsRoutes');
+app.use('/addons', addonsRoutes);
 
 // Iniciar servicio
 app.listen(PORT, () => {
