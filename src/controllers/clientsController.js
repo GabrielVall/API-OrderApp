@@ -1,134 +1,168 @@
-const connection = require("../config/database.js");
+// Nos conectamos a la bd
+const connection = require('../config/database.js');
+// Incluimos las funciones
+const { calculateExecutionTime, sendJsonResponse } = require('../utils/utilsCRUD');
+// Mensaje estandar de error
+const error_message = 'Error in mysql query';
+// Mensaje estandar consulta completa
+const success_message = null;
+// Mensaje estanadar sin resultados
+const no_data_message = null;
 
-// Obtener todos los clientes
+// Función para obtener todos los clientes
 exports.getClients = (req, res) => {
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const startTime = performance.now();
 
     connection.query(
-        "SELECT * FROM clientes LIMIT ? OFFSET ?",
+        "SELECT * FROM clients LIMIT ? OFFSET ?",
         [limit, offset],
         (error, results) => {
+            const executionTimeMs = calculateExecutionTime(startTime);
+
             if (error) {
-                console.error("Error executing query:", error.stack);
-                res.status(500).send("Error executing query");
+                console.error("Error al ejecutar la consulta:", error.stack);
+                sendJsonResponse(res, 'error', error_message, null, executionTimeMs);
                 return;
             }
-            res.json(results);
+
+            sendJsonResponse(res, 'success', success_message, { clients: results, total_results: results.length }, executionTimeMs);
         }
     );
 };
 
-// Obtener un cliente por ID
+// Función para obtener un cliente por ID
 exports.getClientById = (req, res) => {
     const id = req.params.id;
+    const startTime = performance.now();
 
     connection.query(
-        "SELECT * FROM clientes WHERE idCliente = ?",
+        "SELECT * FROM clients WHERE id = ?",
         [id],
         (error, results) => {
-            if (error || results.length === 0) {
-                res.status(404).send("Client not found");
+            const executionTimeMs = calculateExecutionTime(startTime);
+
+            if (error) {
+                console.error("Error al ejecutar la consulta:", error.stack);
+                sendJsonResponse(res, 'error', error_message, null, executionTimeMs);
                 return;
             }
-            res.json(results[0]);
+
+            if (results.length === 0) {
+                sendJsonResponse(res, 'error', no_data_message, null, executionTimeMs);
+                return;
+            }
+
+            sendJsonResponse(res, 'success', success_message, results[0], executionTimeMs);
         }
     );
 };
 
-// Crear una nuevo cliente
+// Función para crear un nuevo cliente
 exports.createClient = (req, res) => {
-    const { idUsuario, nombreCliente, telefonoCliente } = req.body;  // Extraer los datos del cuerpo de la petición
+    const { id, name, phone } = req.body;  // Extraer los datos del cuerpo de la petición
+    const startTime = performance.now();
 
-    if (!idUsuario || !nombreCliente || !telefonoCliente) {
-        res.status(400).send('idUsuario, nombreCliente, and telefonoCliente are required');
+    if (!id || !name || !phone) {
+        const executionTimeMs = calculateExecutionTime(startTime);
+        sendJsonResponse(res, 'error', 'id, name y phone are required', null, executionTimeMs);
         return;
     }
 
-    // Utilizar una consulta preparada para insertar los valores en la base de datos
-    connection.query('INSERT INTO clientes (idUsuario, nombreCliente, telefonoCliente) VALUES (?, ?, ?)', [idUsuario, nombreCliente, telefonoCliente], (error, results) => {
+    connection.query('INSERT INTO clients (user_id, name, phone) VALUES (?, ?, ?)', [id, name, phone], (error, results) => {
+        const executionTimeMs = calculateExecutionTime(startTime);
+
         if (error) {
-            console.error('Error while inserting:', error.stack);
-            res.status(500).send('Error while inserting client');
+            console.error("Error al insertar:", error.stack);
+            sendJsonResponse(res, 'error', error_message, null, executionTimeMs);
             return;
         }
-        res.status(201).send(`Client created with ID: ${results.insertId}`);
+
+        sendJsonResponse(res, 'success', success_message, { clientId: results.insertId }, executionTimeMs);
     });
 };
 
-// Actualizar cliente
+// Función para actualizar cliente
 exports.updateClient = (req, res) => {
-    const idCliente = req.params.id;
-    const { nombreCliente, telefonoCliente } = req.body;
+    const id = req.params.id;
+    const { name, phone } = req.body;
+    const startTime = performance.now();
 
-    if (!nombreCliente && !telefonoCliente) {
-        res.status(400).send('nombreCliente or telefonoCliente is required');
+    if (!name && !phone) {
+        const executionTimeMs = calculateExecutionTime(startTime);
+        sendJsonResponse(res, 'error', 'name o phone are required', null, executionTimeMs);
         return;
     }
 
     // Comprobar qué campos se deben actualizar y construir la consulta SQL en consecuencia
     let updateFields = [];
-    if (nombreCliente) {
-        updateFields.push('nombreCliente = ?');
+    if (name) {
+        updateFields.push('name = ?');
     }
-    if (telefonoCliente) {
-        updateFields.push('telefonoCliente = ?');
+    if (phone) {
+        updateFields.push('phone = ?');
     }
 
     // Construir la consulta SQL con los campos actualizables
-    const sql = `UPDATE clientes SET ${updateFields.join(', ')} WHERE idCliente = ?`;
+    const sql = `UPDATE clients SET ${updateFields.join(', ')} WHERE id = ?`;
 
     // Crear un array con los valores a actualizar
     const values = [];
-    if (nombreCliente) {
-        values.push(nombreCliente);
+    if (name) {
+        values.push(name);
     }
-    if (telefonoCliente) {
-        values.push(telefonoCliente);
+    if (phone) {
+        values.push(phone);
     }
-    values.push(idCliente);
+    values.push(id);
 
     connection.query(sql, values, (error) => {
+        const executionTimeMs = calculateExecutionTime(startTime);
+
         if (error) {
-            console.error('Error while updating:', error.stack);
-            res.status(500).send('Error while updating category');
+            console.error("Error al actualizar:", error.stack);
+            sendJsonResponse(res, 'error', error_message, null, executionTimeMs);
             return;
         }
-        res.send('Client updated successfully');
+
+        sendJsonResponse(res, 'success', success_message, null, executionTimeMs);
     });
 };
 
-// Buscar clientes
+// Función para buscar clientes
 exports.searchClients = (req, res) => {
-    const idUsuario = req.query.idUsuario;
-    const nombreCliente = req.query.nombreCliente;
-    const telefonoCliente = req.query.telefonoCliente;
+    const startTime = performance.now();
+    const id = req.query.id;
+    const name = req.query.name;
+    const phone = req.query.phone;
     const limit = parseInt(req.query.limit) || 10;
     const offset = parseInt(req.query.offset) || 0;
 
-    let sql = 'SELECT * FROM clientes WHERE ';
+    let sql = 'SELECT * FROM clients WHERE '; // corregido "clientes" por "clients"
 
     const searchConditions = [];
     const searchValues = [];
 
-    if (idUsuario) {
-        searchConditions.push('idUsuario = ?');
-        searchValues.push(idUsuario);
+    if (id) {
+        searchConditions.push('id = ?');
+        searchValues.push(id);
     }
 
-    if (nombreCliente) {
-        searchConditions.push('nombreCliente LIKE ?');
-        searchValues.push(`%${nombreCliente}%`);
+    if (name) {
+        searchConditions.push('name LIKE ?');
+        searchValues.push(`%${name}%`);
     }
 
-    if (telefonoCliente) {
-        searchConditions.push('telefonoCliente LIKE ?');
-        searchValues.push(`%${telefonoCliente}%`);
+    if (phone) {
+        searchConditions.push('phone LIKE ?');
+        searchValues.push(`%${phone}%`);
     }
 
     // Verificar si no se proporcionó ningún criterio de búsqueda válido
     if (searchConditions.length === 0) {
-        res.status(400).json({ error: 'Se requieren parámetros de búsqueda válidos' });
+        const executionTimeMs = calculateExecutionTime(startTime);
+        sendJsonResponse(res, 'error', 'Se requieren parámetros de búsqueda válidos', null, executionTimeMs);
         return;
     }
 
@@ -139,12 +173,14 @@ exports.searchClients = (req, res) => {
     searchValues.push(limit, offset);
 
     connection.query(sql, searchValues, (error, results) => {
+        const executionTimeMs = calculateExecutionTime(startTime);
+
         if (error) {
-            console.error('Error executing query:', error.stack);
-            res.status(500).send('Error executing query');
+            console.error("Error ejecutando la consulta:", error.stack);
+            sendJsonResponse(res, 'error', error_message, null, executionTimeMs);
             return;
         }
 
-        res.json(results);
+        sendJsonResponse(res, 'success', success_message, results, executionTimeMs);
     });
 };

@@ -11,19 +11,19 @@ class Clients extends Model {}
 Clients.init(
   {
     // Definir los campos de la tabla y sus tipos de datos
-    idCliente:{
+    id:{
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    idUsuario:{
+    user_id:{
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    nombreCliente: {
+    name: {
         type: DataTypes.STRING,
         allowNull: false, // No se permite un valor nulo para este campo
     },
-    telefonoCliente: {
+    phone: {
         type: DataTypes.STRING,
         allowNull: false, // No se permite un valor nulo para este campo
     },
