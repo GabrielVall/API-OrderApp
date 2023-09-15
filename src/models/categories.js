@@ -11,15 +11,15 @@ class Categories extends Model {}
 Categories.init(
   {
     // Definir los campos de la tabla y sus tipos de datos
-    idCategoria:{
+    id:{
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    nombreCategoria: {
+    name: {
       type: DataTypes.STRING,
       allowNull: false, // No se permite un valor nulo para este campo
     },
-    estadoCategoria: {
+    status: {
       type: DataTypes.INTEGER,
       allowNull: false, // No se permite un valor nulo para este campo
     }
