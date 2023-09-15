@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const usersController = require('../controllers/usersController');
 
-// Obtener todos los usuarios
+// Obtener todos los users
 router.get('/', usersController.getUsers);
 
-// Buscar usuarios
+// Buscar users
 router.get('/search', usersController.searchUsers); // Debe ir antes de /:id para que no tome 'search' como un id
 
 // Obtener un cliente por ID

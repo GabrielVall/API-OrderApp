@@ -1,78 +1,91 @@
+// Nos conectamos a la bd
 const connection = require("../config/database.js");
+// Incluimos las funciones
+const { calculateExecutionTime, sendJsonResponse } = require('../utils/utilsCRUD');
+// Mensaje estandar de error
+const error_message = 'Error in mysql query';
+// Mensaje estandar consulta completa
+const success_message = null;
+// Mensaje estanadar sin resultados
+const no_data_message = null;
 
-// Obtener todos los usuarios
+// Función para obtener todos los usuarios
 exports.getUsers = (req, res) => {
+    const startTime = performance.now();
     const limit = parseInt(req.query.limit) || 10;
     const offset = parseInt(req.query.offset) || 0;
 
     connection.query(
-        "SELECT * FROM usuarios LIMIT ? OFFSET ?",
+        "SELECT * FROM users LIMIT ? OFFSET ?",
         [limit, offset],
         (error, results) => {
+            const executionTimeMs = Math.round(performance.now() - startTime);
+
             if (error) {
-                console.error("Error executing query:", error.stack);
-                res.status(500).send("Error executing query");
+                console.error("Error ejecutando la consulta:", error.stack);
+                sendJsonResponse(res, 'error', error_message, null, executionTimeMs);
                 return;
             }
-            res.json(results);
+
+            sendJsonResponse(res, 'success', success_message, results, executionTimeMs);
         }
     );
 };
 
 // Obtener un usuario por ID
 exports.getUserById = (req, res) => {
+    const startTime = performance.now(); // Iniciar el temporizador
     const id = req.params.id;
 
     connection.query(
-        "SELECT * FROM usuarios WHERE idUsuario = ?",
+        "SELECT * FROM users WHERE id = ?",
         [id],
         (error, results) => {
+            const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+
             if (error || results.length === 0) {
-                res.status(404).send("User not found");
+                sendJsonResponse(res, 'error', 'User not found', null, executionTime);
                 return;
             }
-            res.json(results[0]);
+            sendJsonResponse(res, 'success', 'User retrieved successfully', results[0], executionTime);
         }
     );
 };
 
 // Buscar usuarios
 exports.searchUsers = (req, res) => {
-    const idNivel = req.query.idNivel;
-    const idEstado = req.query.idEstado;
-    const correoUsuario = req.query.correoUsuario;
-    const contrasenaUsuario = req.query.contrasenaUsuario;
+    const startTime = performance.now(); // Iniciar el temporizador
+    
+    const level_id = req.query.level_id;
+    const status_id = req.query.status_id;
+    const email = req.query.email;
     const limit = parseInt(req.query.limit) || 10;
     const offset = parseInt(req.query.offset) || 0;
 
-    let sql = 'SELECT * FROM usuarios WHERE ';
+    let sql = 'SELECT id,level_id,status_id,email FROM users WHERE ';
 
     const searchConditions = [];
     const searchValues = [];
 
-    if (idNivel) {
-        searchConditions.push('idNivel = ?');
-        searchValues.push(idNivel);
+    if (level_id) {
+        searchConditions.push('level_id = ?');
+        searchValues.push(level_id);
     }
 
-    if (idEstado) {
-        searchConditions.push('idEstado = ?');
-        searchValues.push(idEstado);
+    if (status_id) {
+        searchConditions.push('status_id = ?');
+        searchValues.push(status_id);
     }
 
-    if (correoUsuario) {
-        searchConditions.push('correoUsuario LIKE ?');
-        searchValues.push(`%${correoUsuario}%`);
+    if (email) {
+        searchConditions.push('email LIKE ?');
+        searchValues.push(`%${email}%`);
     }
-
-    if (contrasenaUsuario) {
-        searchConditions.push('contrasenaUsuario LIKE ?');
-        searchValues.push(`%${contrasenaUsuario}%`);
-    }
-
+    
     // Verificar si no se proporcionó ningún criterio de búsqueda válido
     if (searchConditions.length === 0) {
-        res.status(400).json({ error: 'Se requieren parámetros de búsqueda válidos' });
+        const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+        sendJsonResponse(res, 'error', 'Se requieren parámetros de búsqueda válidos', null, executionTime);
         return;
     }
 
@@ -83,113 +96,124 @@ exports.searchUsers = (req, res) => {
     searchValues.push(limit, offset);
 
     connection.query(sql, searchValues, (error, results) => {
+        const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+
         if (error) {
             console.error('Error executing query:', error.stack);
-            res.status(500).send('Error executing query');
+            sendJsonResponse(res, 'error', 'Error executing query', null, executionTime);
             return;
         }
 
-        res.json(results);
+        sendJsonResponse(res, 'success', 'Users retrieved successfully', results, executionTime);
     });
 };
 
-const bcrypt = require('bcrypt'); //Libreria de encriptación
-const saltRounds = 10; // Número de rondas de hashing
+
+const bcrypt = require('bcrypt'); 
+const saltRounds = 10; 
 
 exports.createUser = (req, res) => {
-    const { idNivel, idEstado, correoUsuario, contrasenaUsuario } = req.body;  // Extraer los datos del cuerpo de la petición
+    const startTime = performance.now(); // Iniciar el temporizador
 
-    if (!idNivel || !idEstado || !correoUsuario || !contrasenaUsuario) {
-        res.status(400).send('idNivel, idEstado, correoUsuario, and contrasenaUsuario are required');
+    const { level_id, status_id, email, password } = req.body;
+
+    if (!level_id || !status_id || !email || !password) {
+        const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+        sendJsonResponse(res, 'error', 'level_id, status_id, email, and password are required', null, executionTime);
         return;
     }
 
     // Encriptar la contraseña
-    bcrypt.hash(contrasenaUsuario, saltRounds, (error, hashedPassword) => {
+    bcrypt.hash(password, saltRounds, (error, hashedPassword) => {
         if (error) {
+            const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
             console.error('Error while hashing password:', error.stack);
-            res.status(500).send('Error while hashing password');
+            sendJsonResponse(res, 'error', 'Error while hashing password', null, executionTime);
             return;
         }
 
-        // Utilizar una consulta preparada para insertar los valores en la base de datos
-        connection.query('INSERT INTO usuarios (idNivel, idEstado, correoUsuario, contrasenaUsuario) VALUES (?, ?, ?, ?)', [idNivel, idEstado, correoUsuario, hashedPassword], (error, results) => {
+        // Insertar en la base de datos
+        connection.query('INSERT INTO users (level_id, status_id, email, password) VALUES (?, ?, ?, ?)', [level_id, status_id, email, hashedPassword], (error, results) => {
+            const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+
             if (error) {
                 console.error('Error while inserting:', error.stack);
-                res.status(500).send('Error while inserting user');
+                sendJsonResponse(res, 'error', 'Error while inserting user', null, executionTime);
                 return;
             }
-            res.status(201).send(`User created with ID: ${results.insertId}`);
+
+            sendJsonResponse(res, 'success', `User created with ID: ${results.insertId}`, null, executionTime);
         });
     });
 };
 
-// Actualizar usuario
 exports.updateUser = (req, res) => {
-    const idUsuario = req.params.id;
-    const { idNivel, idEstado, correoUsuario, contrasenaUsuario } = req.body;
+    const startTime = performance.now(); // Iniciar el temporizador
+
+    const id = req.params.id;
+    const { level_id, status_id, email, password } = req.body;
 
     // Verificar si se proporcionó al menos un campo para actualizar
-    if (!idNivel && !idEstado && !correoUsuario && !contrasenaUsuario) {
-        res.status(400).send('Se debe proporcionar al menos un campo para actualizar');
+    if (!level_id && !status_id && !email && !password) {
+        const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+        sendJsonResponse(res, 'error', 'Se debe proporcionar al menos un campo para actualizar', null, executionTime);
         return;
     }
 
-    // Encriptar la nueva contraseña si se proporciona
-    if (contrasenaUsuario) {
-        bcrypt.hash(contrasenaUsuario, saltRounds, (error, hashedPassword) => {
+    const handleQueryExecution = (sql, values) => {
+        connection.query(sql, values, (error) => {
+            const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
+
             if (error) {
+                console.error('Error while updating:', error.stack);
+                sendJsonResponse(res, 'error', 'Error while updating user', null, executionTime);
+                return;
+            }
+            sendJsonResponse(res, 'success', 'User updated successfully', null, executionTime);
+        });
+    };
+
+    // Encriptar la nueva contraseña si se proporciona
+    if (password) {
+        bcrypt.hash(password, saltRounds, (error, hashedPassword) => {
+            if (error) {
+                const executionTime = calculateExecutionTime(startTime); // Calcular tiempo de ejecución
                 console.error('Error while hashing password:', error.stack);
-                res.status(500).send('Error while hashing password');
+                sendJsonResponse(res, 'error', 'Error while hashing password', null, executionTime);
                 return;
             }
 
-            // Construir y ejecutar la consulta SQL de actualización con la nueva contraseña encriptada
-            const sql = 'UPDATE usuarios SET ' +
-                (idNivel ? 'idNivel = ?,' : '') +
-                (idEstado ? 'idEstado = ?,' : '') +
-                (correoUsuario ? 'correoUsuario = ?,' : '') +
-                'contrasenaUsuario = ? ' +
-                'WHERE idUsuario = ?';
+            // Construir consulta SQL de actualización con la nueva contraseña encriptada
+            const sql = 'UPDATE users SET ' +
+                (level_id ? 'level_id = ?,' : '') +
+                (status_id ? 'status_id = ?,' : '') +
+                (email ? 'email = ?,' : '') +
+                'password = ? ' +
+                'WHERE id = ?';
 
             const values = [];
-            if (idNivel) values.push(idNivel);
-            if (idEstado) values.push(idEstado);
-            if (correoUsuario) values.push(correoUsuario);
-            values.push(hashedPassword, idUsuario);
+            if (level_id) values.push(level_id);
+            if (status_id) values.push(status_id);
+            if (email) values.push(email);
+            values.push(hashedPassword, id);
 
-            connection.query(sql, values, (error) => {
-                if (error) {
-                    console.error('Error while updating:', error.stack);
-                    res.status(500).send('Error while updating user');
-                    return;
-                }
-                res.send('User updated successfully');
-            });
+            handleQueryExecution(sql, values);
         });
     } else {
         // Si no se proporciona nueva contraseña, actualizar los otros campos
-        // Construir y ejecutar la consulta SQL de actualización sin cambiar la contraseña
-        const sql = 'UPDATE usuarios SET ' +
-            (idNivel ? 'idNivel = ?,' : '') +
-            (idEstado ? 'idEstado = ?,' : '') +
-            (correoUsuario ? 'correoUsuario = ?,' : '') +
-            'contrasenaUsuario = contrasenaUsuario ' +
-            'WHERE idUsuario = ?';
+        const sql = 'UPDATE users SET ' +
+            (level_id ? 'level_id = ?,' : '') +
+            (status_id ? 'status_id = ?,' : '') +
+            (email ? 'email = ?,' : '') +
+            'password = password ' +
+            'WHERE id = ?';
 
         const values = [];
-        if (idNivel) values.push(idNivel);
-        if (idEstado) values.push(idEstado);
-        if (correoUsuario) values.push(correoUsuario);
-        values.push(idUsuario);
+        if (level_id) values.push(level_id);
+        if (status_id) values.push(status_id);
+        if (email) values.push(email);
+        values.push(id);
 
-        connection.query(sql, values, (error) => {
-            if (error) {
-                console.error('Error while updating:', error.stack);
-                res.status(500).send('Error while updating user');
-                return;
-            }
-            res.send('User updated successfully');
-        });
+        handleQueryExecution(sql, values);
     }
 };

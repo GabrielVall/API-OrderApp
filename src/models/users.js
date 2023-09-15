@@ -11,23 +11,23 @@ class Users extends Model { }
 Users.init(
     {
         // Definir los campos de la tabla y sus tipos de datos
-        idUsuario: {
+        id: {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        idNivel: {
+        level_id: {
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        idEstado: {
+        status_id: {
             type: DataTypes.INTEGER,
             allowNull: false, // No se permite un valor nulo para este campo
         },
-        correoUsuario: {
+        email: {
             type: DataTypes.STRING,
             allowNull: false, // No se permite un valor nulo para este campo
         },
-        contrasenaUsuario: {
+        password: {
             type: DataTypes.STRING,
             allowNull: false, // No se permite un valor nulo para este campo
         }
